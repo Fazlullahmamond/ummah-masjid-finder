@@ -100,6 +100,7 @@ export default function Index() {
     </View>
   )
 
+  
   return (
     <ScrollView
       style={[styles.container, isDark && styles.containerDark]}
