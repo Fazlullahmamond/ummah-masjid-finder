@@ -1,21 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, ActivityIndicator, Pressable, TextInput } from "react-native"
+import { View, Text, StyleSheet, ActivityIndicator, Pressable, TextInput, ScrollView } from "react-native"
 import { useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "./components/theme-provider"
 import { useLocation } from "./context/location-context"
 import * as Location from "expo-location"
-
-
-export type LocationContextType = {
-    location: { latitude: number; longitude: number } | null;
-    locationPermissionStatus: "granted" | "denied" | "undetermined";
-    requestLocationPermission: () => void;
-    setManualLocation: (location: { latitude: number; longitude: number }) => void;
-  };
-
 
 export default function Index() {
   const { theme } = useTheme()
@@ -35,13 +26,6 @@ export default function Index() {
     }
   }, [locationPermissionStatus, requestLocationPermission])
 
-  useEffect(() => {
-    // Navigate to map when location is available
-    if (location) {
-      router.push("/map")
-    }
-  }, [location, router])
-
   const handleManualLocationSearch = async () => {
     if (!address.trim()) {
       setLocationError("Please enter an address")
@@ -57,6 +41,7 @@ export default function Index() {
       if (geocodedLocations.length > 0) {
         const { latitude, longitude } = geocodedLocations[0]
         setManualLocation({ latitude, longitude })
+        router.push("/map")
       } else {
         setLocationError("Could not find this location. Please try a different address.")
       }
@@ -116,7 +101,10 @@ export default function Index() {
   )
 
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <ScrollView
+      style={[styles.container, isDark && styles.containerDark]}
+      contentContainerStyle={styles.contentContainer}
+    >
       <View style={styles.iconContainer}>
         <View style={[styles.iconBackground, isDark && styles.iconBackgroundDark]}>
           <Ionicons name="home" size={80} color={isDark ? "#8BC34A" : "#4CAF50"} />
@@ -146,23 +134,54 @@ export default function Index() {
         </View>
       ) : null}
 
-      <View style={styles.buttonContainer}>
-        <Pressable style={[styles.navButton, isDark && styles.navButtonDark]} onPress={() => router.push("/favorites")}>
-          <Ionicons name="heart" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-          <Text style={[styles.navButtonText, isDark && styles.navButtonTextDark]}>Favorites</Text>
+      <View style={styles.featureGrid}>
+        <Pressable style={[styles.featureCard, isDark && styles.featureCardDark]} onPress={() => router.push("/map")}>
+          <View style={[styles.featureIconContainer, isDark && styles.featureIconContainerDark]}>
+            <Ionicons name="map" size={32} color={isDark ? "#8BC34A" : "#4CAF50"} />
+          </View>
+          <Text style={[styles.featureTitle, isDark && styles.featureTitleDark]}>Find Masjids</Text>
+          <Text style={[styles.featureDescription, isDark && styles.featureDescriptionDark]}>
+            Discover nearby masjids on the map
+          </Text>
         </Pressable>
 
-        <Pressable style={[styles.navButton, isDark && styles.navButtonDark]} onPress={() => router.push("/qibla")}>
-          <Ionicons name="compass" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-          <Text style={[styles.navButtonText, isDark && styles.navButtonTextDark]}>Qibla</Text>
+        <Pressable style={[styles.featureCard, isDark && styles.featureCardDark]} onPress={() => router.push("/qibla")}>
+          <View style={[styles.featureIconContainer, isDark && styles.featureIconContainerDark]}>
+            <Ionicons name="compass" size={32} color={isDark ? "#8BC34A" : "#4CAF50"} />
+          </View>
+          <Text style={[styles.featureTitle, isDark && styles.featureTitleDark]}>Qibla Direction</Text>
+          <Text style={[styles.featureDescription, isDark && styles.featureDescriptionDark]}>
+            Find the direction to pray
+          </Text>
         </Pressable>
 
-        <Pressable style={[styles.navButton, isDark && styles.navButtonDark]} onPress={() => router.push("/settings")}>
-          <Ionicons name="settings" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-          <Text style={[styles.navButtonText, isDark && styles.navButtonTextDark]}>Settings</Text>
+        <Pressable
+          style={[styles.featureCard, isDark && styles.featureCardDark]}
+          onPress={() => router.push("/favorites")}
+        >
+          <View style={[styles.featureIconContainer, isDark && styles.featureIconContainerDark]}>
+            <Ionicons name="heart" size={32} color={isDark ? "#8BC34A" : "#4CAF50"} />
+          </View>
+          <Text style={[styles.featureTitle, isDark && styles.featureTitleDark]}>Favorites</Text>
+          <Text style={[styles.featureDescription, isDark && styles.featureDescriptionDark]}>
+            Access your saved masjids
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.featureCard, isDark && styles.featureCardDark]}
+          onPress={() => router.push("/settings")}
+        >
+          <View style={[styles.featureIconContainer, isDark && styles.featureIconContainerDark]}>
+            <Ionicons name="settings" size={32} color={isDark ? "#8BC34A" : "#4CAF50"} />
+          </View>
+          <Text style={[styles.featureTitle, isDark && styles.featureTitleDark]}>Settings</Text>
+          <Text style={[styles.featureDescription, isDark && styles.featureDescriptionDark]}>
+            Customize app preferences
+          </Text>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   )
 }
 
@@ -170,12 +189,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
   },
   containerDark: {
     backgroundColor: "#121212",
+  },
+  contentContainer: {
+    alignItems: "center",
+    paddingVertical: 30,
+    paddingHorizontal: 20,
   },
   iconContainer: {
     marginBottom: 24,
@@ -226,35 +247,6 @@ const styles = StyleSheet.create({
   },
   textDark: {
     color: "#E0E0E0",
-  },
-  buttonContainer: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-  },
-  navButton: {
-    backgroundColor: "#F1F8E9",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    width: "30%",
-  },
-  navButtonDark: {
-    backgroundColor: "#2D3B21",
-  },
-  navButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#4CAF50",
-    marginTop: 8,
-  },
-  navButtonTextDark: {
-    color: "#8BC34A",
   },
   permissionContainer: {
     alignItems: "center",
@@ -353,5 +345,58 @@ const styles = StyleSheet.create({
     color: "#F44336",
     fontSize: 14,
     marginBottom: 16,
+  },
+  featureGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 20,
+  },
+  featureCard: {
+    width: "48%",
+    backgroundColor: "#F9FBF7",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  featureCardDark: {
+    backgroundColor: "#1A2613",
+  },
+  featureIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F1F8E9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  featureIconContainerDark: {
+    backgroundColor: "#2D3B21",
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333333",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  featureTitleDark: {
+    color: "#E0E0E0",
+  },
+  featureDescription: {
+    fontSize: 12,
+    color: "#666666",
+    textAlign: "center",
+  },
+  featureDescriptionDark: {
+    color: "#A0A0A0",
   },
 })
