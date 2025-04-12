@@ -1,39 +1,43 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+import { Stack } from "expo-router"
+import { StatusBar } from "expo-status-bar"
+import { useColorScheme } from "react-native"
+import { ThemeProvider } from "./components/theme-provider"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
+import { LocationProvider } from "./context/location-context"
+import { FavoritesProvider } from "./context/favorites-context"
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
+  const colorScheme = useColorScheme()
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === "dark" ? "dark" : "light"}>
+        <LocationProvider>
+          <FavoritesProvider>
+            <Stack
+              screenOptions={{
+                headerStyle: {
+                  backgroundColor: colorScheme === "dark" ? "#1A1A1A" : "#F7F7F7",
+                },
+                headerTintColor: colorScheme === "dark" ? "#FFFFFF" : "#000000",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                },
+                contentStyle: {
+                  backgroundColor: colorScheme === "dark" ? "#121212" : "#FFFFFF",
+                },
+              }}
+            >
+              <Stack.Screen name="index" options={{ title: "Masjid Finder" }} />
+              <Stack.Screen name="map" options={{ title: "Map View" }} />
+              <Stack.Screen name="favorites" options={{ title: "Favorites" }} />
+              <Stack.Screen name="qibla" options={{ title: "Qibla Direction" }} />
+              <Stack.Screen name="settings" options={{ title: "Settings" }} />
+            </Stack>
+            <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+          </FavoritesProvider>
+        </LocationProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  )
 }
