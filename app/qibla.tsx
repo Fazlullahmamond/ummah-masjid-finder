@@ -70,7 +70,7 @@ export default function QiblaScreen() {
         <View style={styles.compassInnerContainer}>
           {/* Compass Rose */}
           <Image
-            source={require("@/assets/images/icon.png")}
+            source={require("@/assets/images/qibla.png")}
             style={[styles.compassRose, { transform: [{ rotate: `${-compassRotation}deg` }] }]}
           />
 
