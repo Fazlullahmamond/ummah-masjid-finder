@@ -12,7 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fazlullahmamond.ummahmasjidfinder",
       "buildNumber": "1.0.0",
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
