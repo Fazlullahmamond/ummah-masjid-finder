@@ -76,10 +76,25 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Location</Text>
-        <Pressable style={[styles.settingItem, isDark && styles.settingItemDark]} onPress={requestLocationPermission}>
+        <Pressable
+          style={[styles.settingItem, isDark && styles.settingItemDark]}
+          onPress={() => {
+        Alert.alert(
+          "Location Permission",
+          "This will request location permissions for the app. Do you want to proceed?",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+          text: "Proceed",
+          onPress: requestLocationPermission,
+            },
+          ]
+        )
+          }}
+        >
           <View style={styles.settingContent}>
-            <Ionicons name="location" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-            <Text style={[styles.settingText, isDark && styles.textDark]}>Update Location Permissions</Text>
+        <Ionicons name="location" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
+        <Text style={[styles.settingText, isDark && styles.textDark]}>Update Location Permissions</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color={isDark ? "#A0A0A0" : "#757575"} />
         </Pressable>

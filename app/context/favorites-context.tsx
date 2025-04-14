@@ -13,6 +13,8 @@ interface FavoritesContextType {
   isFavorite: (id: string) => boolean
 }
 
+export default FavoritesProvider
+
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined)
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {

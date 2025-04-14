@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, ActivityIndicator, Image, Pressable } from "rea
 import * as Location from "expo-location"
 import { Magnetometer } from "expo-sensors"
 import { useTheme } from "./components/theme-provider"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 const styles = StyleSheet.create({
   container: {
@@ -292,7 +293,7 @@ export default function QiblaScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#121212" : "#FFFFFF" }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? "#121212" : "#FFFFFF" }]}>
       {error ? (
         <Text style={styles.errorText}>{error}</Text>
       ) : (
@@ -353,6 +354,6 @@ export default function QiblaScreen() {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   )
 }

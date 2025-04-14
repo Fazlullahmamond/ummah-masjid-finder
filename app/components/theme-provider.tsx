@@ -14,7 +14,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-export function ThemeProvider({
+function ThemeProvider({
   children,
   value,
 }: {
@@ -50,6 +50,8 @@ export function ThemeProvider({
 
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>
 }
+
+export { ThemeProvider }
 
 export function useTheme() {
   const context = useContext(ThemeContext)

@@ -16,13 +16,7 @@ export default function RootLayout() {
           <FavoritesProvider>
             <Stack
               screenOptions={{
-                headerStyle: {
-                  backgroundColor: colorScheme === "dark" ? "#1A1A1A" : "#F7F7F7",
-                },
-                headerTintColor: colorScheme === "dark" ? "#FFFFFF" : "#000000",
-                headerTitleStyle: {
-                  fontWeight: "bold",
-                },
+                headerShown: false, // Hides the header
                 contentStyle: {
                   backgroundColor: colorScheme === "dark" ? "#121212" : "#FFFFFF",
                 },

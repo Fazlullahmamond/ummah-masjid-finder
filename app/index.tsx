@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "./components/theme-provider"
 import { useLocation } from "./context/location-context"
 import * as Location from "expo-location"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function Index() {
   const { theme } = useTheme()
@@ -106,11 +107,12 @@ export default function Index() {
       style={[styles.container, isDark && styles.containerDark]}
       contentContainerStyle={styles.contentContainer}
     >
-      <View style={styles.iconContainer}>
+
+      <SafeAreaView style={styles.iconContainer}>
         <View style={[styles.iconBackground, isDark && styles.iconBackgroundDark]}>
           <Ionicons name="home" size={80} color={isDark ? "#8BC34A" : "#4CAF50"} />
         </View>
-      </View>
+      </SafeAreaView>
 
       <Text style={[styles.title, isDark && styles.titleDark]}>Masjid Finder</Text>
       <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>Find nearby masjids and prayer times</Text>

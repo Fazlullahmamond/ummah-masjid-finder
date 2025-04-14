@@ -1,5 +1,5 @@
 // Dark mode map style for Google Maps
-export const darkMapStyle = [
+const darkMapStyle = [
     {
       "elementType": "geometry",
       "stylers": [
@@ -185,4 +185,6 @@ export const darkMapStyle = [
       ]
     }
   ];
+  
+  export default darkMapStyle;
   

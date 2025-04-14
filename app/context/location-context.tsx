@@ -16,7 +16,7 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined)
 
-export function LocationProvider({ children }: { children: React.ReactNode }) {
+function LocationProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locationPermissionStatus, setLocationPermissionStatus] = useState<Location.PermissionStatus>(
     Location.PermissionStatus.UNDETERMINED,
@@ -130,6 +130,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     </LocationContext.Provider>
   )
 }
+
+export { LocationProvider };
 
 export function useLocation() {
   const context = useContext(LocationContext)

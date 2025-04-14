@@ -5,12 +5,9 @@ import type { Masjid } from "../types"
 const MASJIDS_CACHE_KEY = "masjids_cache"
 
 // Function to fetch nearby masjids using Overpass API
-export async function fetchNearbyMasjids(latitude: number, longitude: number, radiusKm = 5): Promise<Masjid[]> {
+async function fetchNearbyMasjids(latitude: number, longitude: number, radiusKm = 5): Promise<Masjid[]> {
   try {
-    // Convert radius to meters
     const radiusMeters = radiusKm * 1000
-
-    // Overpass API query to find mosques (amenity=place_of_worship and religion=muslim)
     const overpassQuery = `
       [out:json];
       (
@@ -32,20 +29,16 @@ export async function fetchNearbyMasjids(latitude: number, longitude: number, ra
 
     const data = await response.json()
 
-    // Transform the response into our Masjid type
     const masjids: Masjid[] = data.elements.map((element: any) => {
-      // Get coordinates based on element type
       let lat, lon
       if (element.type === "node") {
         lat = element.lat
         lon = element.lon
       } else {
-        // For ways and relations, use the center point
         lat = element.center.lat
         lon = element.center.lon
       }
 
-      // Calculate distance from user
       const distance = calculateDistance(latitude, longitude, lat, lon)
 
       return {
@@ -58,10 +51,8 @@ export async function fetchNearbyMasjids(latitude: number, longitude: number, ra
       }
     })
 
-    // Sort by distance
     masjids.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity))
 
-    // Cache the results
     await AsyncStorage.setItem(
       MASJIDS_CACHE_KEY,
       JSON.stringify({
@@ -75,7 +66,6 @@ export async function fetchNearbyMasjids(latitude: number, longitude: number, ra
   } catch (error) {
     console.error("Error fetching masjids:", error)
 
-    // Try to load from cache if network request fails
     try {
       const cachedData = await AsyncStorage.getItem(MASJIDS_CACHE_KEY)
       if (cachedData) {
@@ -90,16 +80,15 @@ export async function fetchNearbyMasjids(latitude: number, longitude: number, ra
   }
 }
 
-// Helper function to calculate distance between two coordinates in kilometers
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371 // Radius of the earth in km
+  const R = 6371
   const dLat = deg2rad(lat2 - lat1)
   const dLon = deg2rad(lon2 - lon1)
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  const distance = R * c // Distance in km
+  const distance = R * c
   return distance
 }
 
@@ -107,7 +96,6 @@ function deg2rad(deg: number): number {
   return deg * (Math.PI / 180)
 }
 
-// Helper function to format address from OSM tags
 function formatAddress(tags: any): string {
   const addressParts = []
 
@@ -126,11 +114,17 @@ function formatAddress(tags: any): string {
   }
 
   if (addressParts.length === 0) {
-    // If no address information, use other available tags
     if (tags.street) addressParts.push(tags.street)
     if (tags.city) addressParts.push(tags.city)
     if (tags.village) addressParts.push(tags.village)
   }
 
   return addressParts.length > 0 ? addressParts.join(", ") : "Address unavailable"
+}
+
+// Default export
+export default {
+  fetchNearbyMasjids,
+  calculateDistance,
+  formatAddress,
 }

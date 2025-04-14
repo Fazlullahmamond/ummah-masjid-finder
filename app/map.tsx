@@ -17,10 +17,11 @@ import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "./components/theme-provider"
 import { useLocation } from "./context/location-context"
 import { useFavorites } from "./context/favorites-context"
-import { fetchNearbyMasjids } from "./services/masjid-service"
+import masjidService from "./services/masjid-service"
 import { fetchPrayerTimes } from "./services/prayer-service"
 import type { Masjid } from "./types"
 import * as Location from "expo-location"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 // Create a fallback component for when maps aren't available
 function MasjidListView({
@@ -45,7 +46,7 @@ function MasjidListView({
   onRefresh: () => void
 }) {
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} />
@@ -103,9 +104,9 @@ function MasjidListView({
                 </Pressable>
               </View>
             </View>
-          ))}
-        </ScrollView>
-      )}
+            ))}
+          </ScrollView>
+          )}
 
       <View style={styles.bottomActionBar}>
         <Pressable
@@ -116,7 +117,7 @@ function MasjidListView({
           <Text style={[styles.bottomActionText, isDark && styles.bottomActionTextDark]}>Refresh</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -146,7 +147,7 @@ export default function MapScreen() {
     setMapError(null)
 
     try {
-      const nearbyMasjids = await fetchNearbyMasjids(location.latitude, location.longitude, 5)
+      const nearbyMasjids = await masjidService.fetchNearbyMasjids(location.latitude, location.longitude, 5)
       setMasjids(nearbyMasjids)
 
       if (nearbyMasjids.length === 0) {
@@ -224,18 +225,6 @@ export default function MapScreen() {
     } else {
       addFavorite(masjid)
     }
-  }
-
-  // If we're still loading or don't have location, show loading state
-  if (isLoading && !masjids.length) {
-    return (
-      <View style={[styles.container, isDark && styles.containerDark]}>
-        <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} />
-        <Text style={[styles.loadingText, isDark && styles.textDark]}>
-          {!location ? "Getting your location..." : "Finding nearby masjids..."}
-        </Text>
-      </View>
-    )
   }
 
   // If location permission is not granted, show permission request

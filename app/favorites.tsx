@@ -7,6 +7,7 @@ import { useFavorites } from "./context/favorites-context"
 import { useLocation } from "./context/location-context"
 import type { Masjid } from "./types"
 import EmptyState from "./components/empty-state"
+import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function FavoritesScreen() {
   const { theme } = useTheme()
@@ -29,30 +30,21 @@ export default function FavoritesScreen() {
       return
     }
 
-    // Get origin coordinates (user's location)
     const origin = `${location.latitude},${location.longitude}`
-
-    // Get destination coordinates (masjid location)
     const destination = `${masjid.latitude},${masjid.longitude}`
 
-    // Create the appropriate URL based on the platform
     let url = ""
-
     if (Platform.OS === "ios") {
-      // Apple Maps URL format
       url = `http://maps.apple.com/?saddr=${origin}&daddr=${destination}&dirflg=d`
     } else {
-      // Google Maps URL format for Android
       url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
     }
 
-    // Check if the URL can be opened
     Linking.canOpenURL(url)
       .then((supported) => {
         if (supported) {
           return Linking.openURL(url)
         } else {
-          // Fallback for when specific map apps are not installed
           const fallbackUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
           return Linking.openURL(fallbackUrl)
         }
@@ -64,8 +56,7 @@ export default function FavoritesScreen() {
   }
 
   const renderItem = ({ item }: { item: Masjid }) => (
-    <View style={[styles.card, isDark && styles.cardDark]}>
-      <View style={styles.cardContent}>
+    <SafeAreaView style={[styles.card, styles.cardContent, isDark && styles.cardDark]}>
         <View style={styles.cardHeader}>
           <Text style={[styles.cardTitle, isDark && styles.textDark]}>{item.name}</Text>
           <Pressable
@@ -80,7 +71,6 @@ export default function FavoritesScreen() {
           <Pressable
             style={[styles.actionButton, isDark && styles.actionButtonDark]}
             onPress={() => {
-              // Navigate to map and focus on this masjid
               router.push({
                 pathname: "/map",
                 params: { masjidId: item.id },
@@ -98,18 +88,16 @@ export default function FavoritesScreen() {
             <Text style={[styles.actionButtonText, isDark && styles.actionButtonTextDark]}>Directions</Text>
           </Pressable>
         </View>
-      </View>
-    </View>
+    </SafeAreaView>
   )
 
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       {favorites.length > 0 ? (
         <FlatList
           data={favorites}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
         />
       ) : (
         <EmptyState
@@ -119,7 +107,7 @@ export default function FavoritesScreen() {
           isDark={isDark}
         />
       )}
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -127,52 +115,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
   },
   containerDark: {
     backgroundColor: "#121212",
   },
-  listContent: {
-    padding: 16,
-  },
+
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 6,
     overflow: "hidden",
   },
   cardDark: {
     backgroundColor: "#1E1E1E",
   },
   cardContent: {
-    padding: 16,
+    padding: 10,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#333333",
     flex: 1,
   },
   cardAddress: {
     fontSize: 14,
-    color: "#666666",
-    marginBottom: 16,
+    color: "#777777",
+    marginBottom: 12,
   },
   textDark: {
     color: "#E0E0E0",
   },
   removeButton: {
-    padding: 4,
+    padding: 8,
   },
   cardActions: {
     flexDirection: "row",
@@ -182,19 +169,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F8E9",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 6,
     justifyContent: "center",
+    elevation: 2,
   },
   actionButtonDark: {
     backgroundColor: "#2D3B21",
   },
   actionButtonText: {
-    marginLeft: 6,
-    fontSize: 14,
+    marginLeft: 8,
+    fontSize: 15,
     color: "#4CAF50",
     fontWeight: "500",
   },
