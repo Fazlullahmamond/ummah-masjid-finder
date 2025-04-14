@@ -430,8 +430,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#EEEEEE",
   },
   bottomActionButton: {
     flexDirection: "row",
