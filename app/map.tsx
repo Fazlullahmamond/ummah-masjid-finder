@@ -12,6 +12,7 @@ import { fetchPrayerTimes } from "./services/prayer-service"
 import type { Masjid } from "./types"
 import MasjidBottomSheet from "./components/masjid-bottom-sheet"
 import { darkMapStyle } from "./constants/map-styles"
+import type { BottomSheetModal as BottomSheetModalType } from "@gorhom/bottom-sheet"
 
 // We'll conditionally import MapView to avoid the native module error
 let MapView: any = null
@@ -45,7 +46,8 @@ export default function MapScreen() {
   const [mapError, setMapError] = useState<string | null>(null)
 
   const mapRef = useRef(null)
-  const bottomSheetModalRef = useRef(null)
+  
+  const bottomSheetModalRef = useRef<BottomSheetModalType | null>(null)
 
   const snapPoints = ["25%", "50%", "75%"]
   const isDark = theme === "dark"
@@ -240,7 +242,7 @@ export default function MapScreen() {
             onPress={() => handleMarkerPress(masjid)}
           >
             <View style={[styles.markerContainer, isDark && styles.markerContainerDark]}>
-              <Ionicons name="mosque" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
+              <Ionicons name="home" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
             </View>
           </Marker>
         ))}

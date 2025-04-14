@@ -54,7 +54,7 @@ export default function Index() {
   }
 
   const renderPermissionDenied = () => (
-    <View style={styles.formContainer}>
+    <ScrollView style={styles.formContainer}>
       <Text style={[styles.formTitle, isDark && styles.titleDark]}>Enter Your Location</Text>
       <Text style={[styles.formSubtitle, isDark && styles.subtitleDark]}>
         Please enter your address or city to find nearby masjids
@@ -90,7 +90,7 @@ export default function Index() {
           Try using device location again
         </Text>
       </Pressable>
-    </View>
+    </ScrollView>
   )
 
   const renderLoading = () => (

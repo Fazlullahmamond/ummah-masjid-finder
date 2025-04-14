@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useTheme } from "./components/theme-provider"
 import { useLocation } from "./context/location-context"
 import { useFavorites } from "./context/favorites-context"
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context"
 
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme()
@@ -56,7 +57,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, isDark && styles.containerDark]}>
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Appearance</Text>
         <View style={[styles.settingItem, isDark && styles.settingItemDark]}>
@@ -113,7 +114,7 @@ export default function SettingsScreen() {
           <Text style={[styles.versionText, isDark && styles.versionTextDark]}>1.0.0</Text>
         </View>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   )
 }
 
