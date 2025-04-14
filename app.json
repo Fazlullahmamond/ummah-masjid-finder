@@ -9,14 +9,18 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fazlullahmamond.ummahmasjidfinder",
+      "buildNumber": "1.0.0",
+      "icon": "./assets/images/icon.png"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.fazlullahmamond.ummahmasjidfinder"
+      "package": "com.fazlullahmamond.ummahmasjidfinder",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
