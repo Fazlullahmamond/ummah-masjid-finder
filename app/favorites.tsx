@@ -1,9 +1,10 @@
 "use client"
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native"
+import { View, Text, StyleSheet, FlatList, Pressable, Alert, Linking, Platform } from "react-native"
 import { useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "./components/theme-provider"
 import { useFavorites } from "./context/favorites-context"
+import { useLocation } from "./context/location-context"
 import type { Masjid } from "./types"
 import EmptyState from "./components/empty-state"
 
@@ -11,6 +12,7 @@ export default function FavoritesScreen() {
   const { theme } = useTheme()
   const router = useRouter()
   const { favorites, removeFavorite } = useFavorites()
+  const { location } = useLocation()
 
   const isDark = theme === "dark"
 
@@ -19,6 +21,46 @@ export default function FavoritesScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Remove", style: "destructive", onPress: () => removeFavorite(id) },
     ])
+  }
+
+  const handleGetDirections = (masjid: Masjid) => {
+    if (!location) {
+      Alert.alert("Error", "Your location is not available. Please try again.")
+      return
+    }
+
+    // Get origin coordinates (user's location)
+    const origin = `${location.latitude},${location.longitude}`
+
+    // Get destination coordinates (masjid location)
+    const destination = `${masjid.latitude},${masjid.longitude}`
+
+    // Create the appropriate URL based on the platform
+    let url = ""
+
+    if (Platform.OS === "ios") {
+      // Apple Maps URL format
+      url = `http://maps.apple.com/?saddr=${origin}&daddr=${destination}&dirflg=d`
+    } else {
+      // Google Maps URL format for Android
+      url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+    }
+
+    // Check if the URL can be opened
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(url)
+        } else {
+          // Fallback for when specific map apps are not installed
+          const fallbackUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+          return Linking.openURL(fallbackUrl)
+        }
+      })
+      .catch((err) => {
+        console.error("An error occurred while opening maps:", err)
+        Alert.alert("Error", "Could not open maps application. Please try again.")
+      })
   }
 
   const renderItem = ({ item }: { item: Masjid }) => (
@@ -50,10 +92,7 @@ export default function FavoritesScreen() {
           </Pressable>
           <Pressable
             style={[styles.actionButton, isDark && styles.actionButtonDark]}
-            onPress={() => {
-              // Open directions in Google Maps
-              // Implementation would be similar to the one in the home screen
-            }}
+            onPress={() => handleGetDirections(item)}
           >
             <Ionicons name="navigate" size={18} color={isDark ? "#8BC34A" : "#4CAF50"} />
             <Text style={[styles.actionButtonText, isDark && styles.actionButtonTextDark]}>Directions</Text>

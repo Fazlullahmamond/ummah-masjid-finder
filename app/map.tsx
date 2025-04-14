@@ -12,27 +12,11 @@ import { fetchPrayerTimes } from "./services/prayer-service"
 import type { Masjid } from "./types"
 import MasjidBottomSheet from "./components/masjid-bottom-sheet"
 import { darkMapStyle } from "./constants/map-styles"
-import type { BottomSheetModal as BottomSheetModalType } from "@gorhom/bottom-sheet"
-import { ScrollView } from "react-native-gesture-handler"
+import * as Location from "expo-location"
 
-// We'll conditionally import MapView to avoid the native module error
-let MapView: any = null
-let Marker: any = null
-let PROVIDER_GOOGLE: any = null
-let BottomSheetModal: any = null
-
-try {
-  // Only import if we're in a native environment
-  const Maps = require("react-native-maps")
-  MapView = Maps.default
-  Marker = Maps.Marker
-  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE
-
-  const BottomSheet = require("@gorhom/bottom-sheet")
-  BottomSheetModal = BottomSheet.BottomSheetModal
-} catch (error) {
-  console.log("Maps or BottomSheet module not available")
-}
+// Import MapView directly - don't use conditional imports as they can cause issues
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps"
+import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 
 export default function MapScreen() {
   const { theme } = useTheme()
@@ -45,10 +29,10 @@ export default function MapScreen() {
   const [prayerTimes, setPrayerTimes] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [mapError, setMapError] = useState<string | null>(null)
+  const [mapReady, setMapReady] = useState(false)
 
-  const mapRef = useRef(null)
-  
-  const bottomSheetModalRef = useRef<BottomSheetModalType | null>(null)
+  const mapRef = useRef<MapView>(null)
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null)
 
   const snapPoints = ["25%", "50%", "75%"]
   const isDark = theme === "dark"
@@ -98,17 +82,46 @@ export default function MapScreen() {
   }
 
   const handleOpenInMaps = (masjid: Masjid) => {
-    const scheme = Platform.select({ ios: "maps:0,0?q=", android: "geo:0,0?q=" })
-    const latLng = `${masjid.latitude},${masjid.longitude}`
-    const label = masjid.name
-    const url = Platform.select({
-      ios: `${scheme}${label}@${latLng}`,
-      android: `${scheme}${latLng}(${label})`,
-    })
-
-    if (url) {
-      Linking.openURL(url)
+    if (!location) {
+      Alert.alert("Error", "Your location is not available. Please try again.")
+      return
     }
+
+    // Get origin coordinates (user's location)
+    const origin = `${location.latitude},${location.longitude}`
+
+    // Get destination coordinates (masjid location)
+    const destination = `${masjid.latitude},${masjid.longitude}`
+
+    // Create the appropriate URL based on the platform
+    let url = ""
+
+    if (Platform.OS === "ios") {
+      // Apple Maps URL format
+      url = `http://maps.apple.com/?saddr=${origin}&daddr=${destination}&dirflg=d`
+
+      // Alternative: Use Google Maps if installed (iOS)
+      // url = `comgooglemaps://?saddr=${origin}&daddr=${destination}&directionsmode=driving`
+    } else {
+      // Google Maps URL format for Android
+      url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+    }
+
+    // Check if the URL can be opened
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(url)
+        } else {
+          // Fallback for when specific map apps are not installed
+          const fallbackUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+          return Linking.openURL(fallbackUrl)
+        }
+      })
+      .catch((err) => {
+        console.error("An error occurred while opening maps:", err)
+        Alert.alert("Error", "Could not open maps application. Please try again.")
+      })
   }
 
   const handleToggleFavorite = (masjid: Masjid) => {
@@ -119,75 +132,9 @@ export default function MapScreen() {
     }
   }
 
-  // If MapView is not available, show a fallback UI
-  if (!MapView || !BottomSheetModal) {
-    return (
-      <ScrollView style={[styles.container, isDark && styles.containerDark]}>
-        <Text style={[styles.title, isDark && styles.titleDark]}>Map Not Available</Text>
-        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
-          The map functionality requires a native device. Please run this app on a physical device or emulator.
-        </Text>
-
-        <View style={styles.masjidList}>
-          <Text style={[styles.listTitle, isDark && styles.titleDark]}>
-            {isLoading ? "Finding Nearby Masjids..." : "Nearby Masjids"}
-          </Text>
-
-          {isLoading ? (
-            <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} style={styles.loader} />
-          ) : mapError ? (
-            <Text style={styles.errorText}>{mapError}</Text>
-          ) : masjids.length > 0 ? (
-            masjids.map((masjid) => (
-              <View key={masjid.id} style={[styles.masjidItem, isDark && styles.masjidItemDark]}>
-                <View>
-                  <Text style={[styles.masjidName, isDark && styles.textDark]}>{masjid.name}</Text>
-                  <Text style={[styles.masjidAddress, isDark && styles.subtitleDark]}>{masjid.address}</Text>
-                  {masjid.distance && (
-                    <Text style={[styles.masjidDistance, isDark && styles.subtitleDark]}>
-                      {masjid.distance.toFixed(2)} km away
-                    </Text>
-                  )}
-                </View>
-                <Ionicons
-                  name={isFavorite(masjid.id) ? "heart" : "heart-outline"}
-                  size={24}
-                  color={isDark ? "#8BC34A" : "#4CAF50"}
-                  onPress={() => {
-                    if (isFavorite(masjid.id)) {
-                      removeFavorite(masjid.id)
-                    } else {
-                      addFavorite(masjid)
-                    }
-                  }}
-                />
-              </View>
-            ))
-          ) : (
-            <Text style={[styles.noMasjidsText, isDark && styles.textDark]}>
-              No masjids found nearby. Try a different location.
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <Pressable style={[styles.button, isDark && styles.buttonDark]} onPress={() => router.push("/favorites")}>
-            <Ionicons name="heart" size={20} color={isDark ? "#8BC34A" : "#4CAF50"} />
-            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>Favorites</Text>
-          </Pressable>
-
-          <Pressable style={[styles.button, isDark && styles.buttonDark]} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={isDark ? "#8BC34A" : "#4CAF50"} />
-            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>Back</Text>
-          </Pressable>
-
-          <Pressable style={[styles.button, isDark && styles.buttonDark]} onPress={loadNearbyMasjids}>
-            <Ionicons name="refresh" size={20} color={isDark ? "#8BC34A" : "#4CAF50"} />
-            <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>Refresh</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
-    )
+  const handleMapReady = () => {
+    setMapReady(true)
+    console.log("Map is ready!")
   }
 
   // If we're still loading or don't have location, show loading state
@@ -202,52 +149,79 @@ export default function MapScreen() {
     )
   }
 
+  // If location permission is not granted, show permission request
+  if (locationPermissionStatus !== Location.PermissionStatus.GRANTED) {
+    return (
+      <View style={[styles.container, isDark && styles.containerDark]}>
+        <Text style={[styles.title, isDark && styles.titleDark]}>Location Permission Required</Text>
+        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
+          Please allow location access so we can find nearby masjids for you.
+        </Text>
+        <Pressable
+          style={[styles.permissionButton, isDark && styles.permissionButtonDark]}
+          onPress={requestLocationPermission}
+        >
+          <Text style={[styles.permissionButtonText, isDark && styles.permissionButtonTextDark]}>
+            Grant Location Permission
+          </Text>
+        </Pressable>
+      </View>
+    )
+  }
+
   // Render the map with masjids
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: location?.latitude || 0,
-          longitude: location?.longitude || 0,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-        showsUserLocation={!isManualLocation}
-        showsMyLocationButton={!isManualLocation}
-        showsCompass
-        customMapStyle={isDark ? darkMapStyle : []}
-      >
-        {isManualLocation && location && (
-          <Marker
-            coordinate={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            title="Your Location"
-            pinColor="#4285F4"
-          />
-        )}
+      {location ? (
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          provider={PROVIDER_GOOGLE}
+          initialRegion={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }}
+          showsUserLocation={!isManualLocation}
+          showsMyLocationButton={!isManualLocation}
+          showsCompass
+          customMapStyle={isDark ? darkMapStyle : []}
+          onMapReady={handleMapReady}
+        >
+          {isManualLocation && location && (
+            <Marker
+              coordinate={{
+                latitude: location.latitude,
+                longitude: location.longitude,
+              }}
+              title="Your Location"
+              pinColor="#4285F4"
+            />
+          )}
 
-        {masjids.map((masjid) => (
-          <Marker
-            key={masjid.id}
-            coordinate={{
-              latitude: masjid.latitude,
-              longitude: masjid.longitude,
-            }}
-            title={masjid.name}
-            description={masjid.address}
-            onPress={() => handleMarkerPress(masjid)}
-          >
-            <View style={[styles.markerContainer, isDark && styles.markerContainerDark]}>
-              <Ionicons name="home" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-            </View>
-          </Marker>
-        ))}
-      </MapView>
+          {masjids.map((masjid) => (
+            <Marker
+              key={masjid.id}
+              coordinate={{
+                latitude: masjid.latitude,
+                longitude: masjid.longitude,
+              }}
+              title={masjid.name}
+              description={masjid.address}
+              onPress={() => handleMarkerPress(masjid)}
+            >
+              <View style={[styles.markerContainer, isDark && styles.markerContainerDark]}>
+                <Ionicons name="home" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      ) : (
+        <View style={[styles.errorContainer, { top: 100 }]}>
+          <Text style={styles.errorText}>Location not available. Please try again.</Text>
+        </View>
+      )}
 
       <View style={styles.actionButtonsContainer}>
         <Pressable
@@ -279,6 +253,13 @@ export default function MapScreen() {
       {mapError && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{mapError}</Text>
+        </View>
+      )}
+
+      {!mapReady && location && (
+        <View style={styles.mapLoadingOverlay}>
+          <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} />
+          <Text style={[styles.loadingText, isDark && styles.textDark]}>Loading map...</Text>
         </View>
       )}
 
@@ -336,89 +317,29 @@ const styles = StyleSheet.create({
   textDark: {
     color: "#E0E0E0",
   },
-  button: {
-    backgroundColor: "#F1F8E9",
-    padding: 12,
+  permissionButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     borderRadius: 8,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  buttonDark: {
-    backgroundColor: "#2D3B21",
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#4CAF50",
-    marginLeft: 6,
-  },
-  buttonTextDark: {
-    color: "#8BC34A",
-  },
-  masjidList: {
-    flex: 1,
-    width: "100%",
-    padding: 20,
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333333",
-    marginBottom: 12,
-  },
-  masjidItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#F9FBF7",
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  masjidItemDark: {
-    backgroundColor: "#1A2613",
-  },
-  masjidName: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#333333",
-  },
-  masjidAddress: {
-    fontSize: 14,
-    color: "#666666",
-    marginTop: 4,
-  },
-  masjidDistance: {
-    fontSize: 12,
-    color: "#4CAF50",
-    marginTop: 4,
-  },
-  noMasjidsText: {
-    fontSize: 16,
-    color: "#666666",
-    textAlign: "center",
     marginTop: 20,
   },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
-    position: 'relative',
-    bottom: 10,
-    right: 0,
-    borderTopColor: "#EEEEEE",
+  permissionButtonDark: {
+    backgroundColor: "#8BC34A",
   },
-  loader: {
-    marginTop: 20,
+  permissionButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FFFFFF",
+  },
+  permissionButtonTextDark: {
+    color: "#121212",
   },
   errorText: {
-    color: "#F44336",
+    color: "#FFFFFF",
     fontSize: 14,
-    marginTop: 12,
     textAlign: "center",
+    padding: 8,
   },
   errorContainer: {
     position: "absolute",
@@ -428,6 +349,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(244, 67, 54, 0.8)",
     padding: 12,
     borderRadius: 8,
+    zIndex: 1000,
   },
   markerContainer: {
     backgroundColor: "white",
@@ -460,5 +382,12 @@ const styles = StyleSheet.create({
   },
   actionButtonDark: {
     backgroundColor: "rgba(30, 30, 30, 0.9)",
+  },
+  mapLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
   },
 })
