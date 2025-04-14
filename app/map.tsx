@@ -1,7 +1,17 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
-import { View, StyleSheet, Alert, ActivityIndicator, Text, Pressable, Platform, Linking } from "react-native"
+import { useEffect, useState } from "react"
+import {
+  View,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Text,
+  Pressable,
+  Platform,
+  Linking,
+  ScrollView,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useTheme } from "./components/theme-provider"
@@ -10,13 +20,105 @@ import { useFavorites } from "./context/favorites-context"
 import { fetchNearbyMasjids } from "./services/masjid-service"
 import { fetchPrayerTimes } from "./services/prayer-service"
 import type { Masjid } from "./types"
-import MasjidBottomSheet from "./components/masjid-bottom-sheet"
-import { darkMapStyle } from "./constants/map-styles"
 import * as Location from "expo-location"
 
-// Import MapView directly - don't use conditional imports as they can cause issues
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps"
-import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+// Create a fallback component for when maps aren't available
+function MasjidListView({
+  masjids,
+  isLoading,
+  mapError,
+  isDark,
+  onOpenInMaps,
+  onToggleFavorite,
+  isFavorite,
+  onViewPrayerTimes,
+  onRefresh,
+}: {
+  masjids: Masjid[]
+  isLoading: boolean
+  mapError: string | null
+  isDark: boolean
+  onOpenInMaps: (masjid: Masjid) => void
+  onToggleFavorite: (masjid: Masjid) => void
+  isFavorite: (id: string) => boolean
+  onViewPrayerTimes: (masjid: Masjid) => void
+  onRefresh: () => void
+}) {
+  return (
+    <View style={[styles.container, isDark && styles.containerDark]}>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} />
+          <Text style={[styles.loadingText, isDark && styles.textDark]}>Finding nearby masjids...</Text>
+        </View>
+      ) : mapError ? (
+        <View style={styles.errorMessageContainer}>
+          <Text style={[styles.errorMessageText, isDark && styles.textDark]}>{mapError}</Text>
+        </View>
+      ) : masjids.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="location" size={60} color={isDark ? "#8BC34A" : "#4CAF50"} style={styles.emptyIcon} />
+          <Text style={[styles.emptyTitle, isDark && styles.titleDark]}>No Masjids Found</Text>
+          <Text style={[styles.emptyMessage, isDark && styles.subtitleDark]}>
+            Try a different location or increase search radius
+          </Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.listContainer}>
+          {masjids.map((masjid) => (
+            <View key={masjid.id} style={[styles.masjidCard, isDark && styles.masjidCardDark]}>
+              <View style={styles.masjidHeader}>
+                <Text style={[styles.masjidName, isDark && styles.textDark]}>{masjid.name}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.favoriteButton, pressed && { opacity: 0.7 }]}
+                  onPress={() => onToggleFavorite(masjid)}
+                >
+                  <Ionicons
+                    name={isFavorite(masjid.id) ? "heart" : "heart-outline"}
+                    size={24}
+                    color={isDark ? "#8BC34A" : "#4CAF50"}
+                  />
+                </Pressable>
+              </View>
+              <Text style={[styles.masjidAddress, isDark && styles.subtitleDark]}>{masjid.address}</Text>
+              {masjid.distance && (
+                <Text style={[styles.masjidDistance, isDark && styles.subtitleDark]}>
+                  {masjid.distance.toFixed(2)} km away
+                </Text>
+              )}
+              <View style={styles.masjidActions}>
+                <Pressable
+                  style={[styles.masjidActionButton, isDark && styles.masjidActionButtonDark]}
+                  onPress={() => onOpenInMaps(masjid)}
+                >
+                  <Ionicons name="navigate" size={18} color={isDark ? "#8BC34A" : "#4CAF50"} />
+                  <Text style={[styles.masjidActionText, isDark && styles.masjidActionTextDark]}>Directions</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.masjidActionButton, isDark && styles.masjidActionButtonDark]}
+                  onPress={() => onViewPrayerTimes(masjid)}
+                >
+                  <Ionicons name="time" size={18} color={isDark ? "#8BC34A" : "#4CAF50"} />
+                  <Text style={[styles.masjidActionText, isDark && styles.masjidActionTextDark]}>Prayer Times</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      <View style={styles.bottomActionBar}>
+        <Pressable
+          style={[styles.bottomActionButton, isDark && styles.bottomActionButtonDark]}
+          onPress={() => onRefresh()}
+        >
+          <Ionicons name="refresh" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
+          <Text style={[styles.bottomActionText, isDark && styles.bottomActionTextDark]}>Refresh</Text>
+        </Pressable>
+      </View>
+    </View>
+  )
+}
 
 export default function MapScreen() {
   const { theme } = useTheme()
@@ -26,15 +128,9 @@ export default function MapScreen() {
 
   const [masjids, setMasjids] = useState<Masjid[]>([])
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null)
-  const [prayerTimes, setPrayerTimes] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [mapError, setMapError] = useState<string | null>(null)
-  const [mapReady, setMapReady] = useState(false)
 
-  const mapRef = useRef<MapView>(null)
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null)
-
-  const snapPoints = ["25%", "50%", "75%"]
   const isDark = theme === "dark"
 
   useEffect(() => {
@@ -64,19 +160,20 @@ export default function MapScreen() {
     }
   }
 
-  const handleMarkerPress = async (masjid: Masjid) => {
+  const handleViewPrayerTimes = async (masjid: Masjid) => {
     setSelectedMasjid(masjid)
 
     try {
       const times = await fetchPrayerTimes(masjid.latitude, masjid.longitude)
-      setPrayerTimes(times)
 
-      if (bottomSheetModalRef.current) {
-        bottomSheetModalRef.current.present()
-      }
+      // Show prayer times in an alert
+      Alert.alert(
+        `Prayer Times for ${masjid.name}`,
+        `Fajr: ${times.fajr}\nSunrise: ${times.sunrise}\nDhuhr: ${times.dhuhr}\nAsr: ${times.asr}\nMaghrib: ${times.maghrib}\nIsha: ${times.isha}`,
+        [{ text: "OK" }],
+      )
     } catch (error) {
       console.error("Failed to fetch prayer times:", error)
-      setPrayerTimes(null)
       Alert.alert("Error", "Failed to load prayer times. Please try again.")
     }
   }
@@ -99,9 +196,6 @@ export default function MapScreen() {
     if (Platform.OS === "ios") {
       // Apple Maps URL format
       url = `http://maps.apple.com/?saddr=${origin}&daddr=${destination}&dirflg=d`
-
-      // Alternative: Use Google Maps if installed (iOS)
-      // url = `comgooglemaps://?saddr=${origin}&daddr=${destination}&directionsmode=driving`
     } else {
       // Google Maps URL format for Android
       url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
@@ -130,11 +224,6 @@ export default function MapScreen() {
     } else {
       addFavorite(masjid)
     }
-  }
-
-  const handleMapReady = () => {
-    setMapReady(true)
-    console.log("Map is ready!")
   }
 
   // If we're still loading or don't have location, show loading state
@@ -169,111 +258,19 @@ export default function MapScreen() {
     )
   }
 
-  // Render the map with masjids
+  // Always use the list view since maps are not working
   return (
-    <View style={styles.container}>
-      {location ? (
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          showsUserLocation={!isManualLocation}
-          showsMyLocationButton={!isManualLocation}
-          showsCompass
-          customMapStyle={isDark ? darkMapStyle : []}
-          onMapReady={handleMapReady}
-        >
-          {isManualLocation && location && (
-            <Marker
-              coordinate={{
-                latitude: location.latitude,
-                longitude: location.longitude,
-              }}
-              title="Your Location"
-              pinColor="#4285F4"
-            />
-          )}
-
-          {masjids.map((masjid) => (
-            <Marker
-              key={masjid.id}
-              coordinate={{
-                latitude: masjid.latitude,
-                longitude: masjid.longitude,
-              }}
-              title={masjid.name}
-              description={masjid.address}
-              onPress={() => handleMarkerPress(masjid)}
-            >
-              <View style={[styles.markerContainer, isDark && styles.markerContainerDark]}>
-                <Ionicons name="home" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-              </View>
-            </Marker>
-          ))}
-        </MapView>
-      ) : (
-        <View style={[styles.errorContainer, { top: 100 }]}>
-          <Text style={styles.errorText}>Location not available. Please try again.</Text>
-        </View>
-      )}
-
-      <View style={styles.actionButtonsContainer}>
-        <Pressable
-          style={[styles.actionButton, isDark && styles.actionButtonDark]}
-          onPress={() => router.push("/favorites")}
-        >
-          <Ionicons name="heart" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-        </Pressable>
-
-        <Pressable
-          style={[styles.actionButton, isDark && styles.actionButtonDark]}
-          onPress={() => router.push("/qibla")}
-        >
-          <Ionicons name="compass" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-        </Pressable>
-
-        <Pressable
-          style={[styles.actionButton, isDark && styles.actionButtonDark]}
-          onPress={() => router.push("/settings")}
-        >
-          <Ionicons name="settings" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-        </Pressable>
-
-        <Pressable style={[styles.actionButton, isDark && styles.actionButtonDark]} onPress={loadNearbyMasjids}>
-          <Ionicons name="refresh" size={24} color={isDark ? "#8BC34A" : "#4CAF50"} />
-        </Pressable>
-      </View>
-
-      {mapError && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{mapError}</Text>
-        </View>
-      )}
-
-      {!mapReady && location && (
-        <View style={styles.mapLoadingOverlay}>
-          <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} />
-          <Text style={[styles.loadingText, isDark && styles.textDark]}>Loading map...</Text>
-        </View>
-      )}
-
-      <MasjidBottomSheet
-        ref={bottomSheetModalRef}
-        snapPoints={snapPoints}
-        masjid={selectedMasjid}
-        isFavorite={selectedMasjid ? isFavorite(selectedMasjid.id) : false}
-        onOpenInMaps={handleOpenInMaps}
-        onToggleFavorite={handleToggleFavorite}
-        isDark={isDark}
-        prayerTimes={prayerTimes}
-      />
-    </View>
+    <MasjidListView
+      masjids={masjids}
+      isLoading={isLoading}
+      mapError={mapError}
+      isDark={isDark}
+      onOpenInMaps={handleOpenInMaps}
+      onToggleFavorite={handleToggleFavorite}
+      isFavorite={isFavorite}
+      onViewPrayerTimes={handleViewPrayerTimes}
+      onRefresh={loadNearbyMasjids}
+    />
   )
 }
 
@@ -285,16 +282,16 @@ const styles = StyleSheet.create({
   containerDark: {
     backgroundColor: "#121212",
   },
-  map: {
-    flex: 1,
+  headerContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEEEEE",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#333333",
     marginBottom: 8,
-    marginTop: 20,
-    marginHorizontal: 20,
   },
   titleDark: {
     color: "#E0E0E0",
@@ -302,12 +299,14 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: "#666666",
-    marginBottom: 20,
-    marginHorizontal: 20,
-    textAlign: "center",
+    marginBottom: 8,
   },
   subtitleDark: {
     color: "#A0A0A0",
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
@@ -323,6 +322,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     marginTop: 20,
+    alignSelf: "center",
   },
   permissionButtonDark: {
     backgroundColor: "#8BC34A",
@@ -335,59 +335,132 @@ const styles = StyleSheet.create({
   permissionButtonTextDark: {
     color: "#121212",
   },
-  errorText: {
-    color: "#FFFFFF",
+  errorMessageContainer: {
+    padding: 16,
+    backgroundColor: "#FFEBEE",
+    borderRadius: 8,
+    margin: 16,
+  },
+  errorMessageText: {
+    color: "#D32F2F",
     fontSize: 14,
     textAlign: "center",
-    padding: 8,
   },
-  errorContainer: {
-    position: "absolute",
-    top: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: "rgba(244, 67, 54, 0.8)",
-    padding: 12,
-    borderRadius: 8,
-    zIndex: 1000,
+  listContainer: {
+    flex: 1,
+    padding: 16,
   },
-  markerContainer: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 6,
-    borderWidth: 2,
-    borderColor: "#4CAF50",
-  },
-  markerContainerDark: {
-    backgroundColor: "#333333",
-    borderColor: "#8BC34A",
-  },
-  actionButtonsContainer: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    gap: 8,
-  },
-  actionButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 8,
-    padding: 8,
-    alignItems: "center",
-    justifyContent: "center",
+  masjidCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  actionButtonDark: {
-    backgroundColor: "rgba(30, 30, 30, 0.9)",
+  masjidCardDark: {
+    backgroundColor: "#1E1E1E",
   },
-  mapLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
+  masjidHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    zIndex: 999,
+    marginBottom: 8,
+  },
+  masjidName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333333",
+    flex: 1,
+  },
+  favoriteButton: {
+    padding: 4,
+  },
+  masjidAddress: {
+    fontSize: 14,
+    color: "#666666",
+    marginBottom: 8,
+  },
+  masjidDistance: {
+    fontSize: 14,
+    color: "#4CAF50",
+    marginBottom: 16,
+  },
+  masjidActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  masjidActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F8E9",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  masjidActionButtonDark: {
+    backgroundColor: "#2D3B21",
+  },
+  masjidActionText: {
+    fontSize: 14,
+    color: "#4CAF50",
+    marginLeft: 6,
+  },
+  masjidActionTextDark: {
+    color: "#8BC34A",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyIcon: {
+    marginBottom: 16,
+    opacity: 0.7,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333333",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: "#666666",
+    textAlign: "center",
+  },
+  bottomActionBar: {
+    flexDirection: "row",
+    justifyContent: "center",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#EEEEEE",
+  },
+  bottomActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F8E9",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  bottomActionButtonDark: {
+    backgroundColor: "#2D3B21",
+  },
+  bottomActionText: {
+    fontSize: 16,
+    color: "#4CAF50",
+    marginLeft: 8,
+  },
+  bottomActionTextDark: {
+    color: "#8BC34A",
   },
 })
