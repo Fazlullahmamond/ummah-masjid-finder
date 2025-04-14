@@ -1,7 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { View, Text, StyleSheet, Image, ActivityIndicator } from "react-native"
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+  Appearance,
+} from "react-native"
 import { Magnetometer } from "expo-sensors"
 import { useTheme } from "./components/theme-provider"
 import { useLocation } from "./context/location-context"
@@ -36,7 +43,6 @@ export default function QiblaScreen() {
       Magnetometer.addListener((data) => {
         setMagnetometerData(data)
 
-        // Calculate device heading
         const angle = Math.atan2(data.y, data.x) * (180 / Math.PI)
         const heading = (angle + 360) % 360
         setHeading(heading)
@@ -51,84 +57,106 @@ export default function QiblaScreen() {
     setSubscription(null)
   }
 
-  // Calculate the rotation for the compass and qibla indicator
   const compassRotation = heading
-  const qiblaRotation = qiblaAngle !== null ? qiblaAngle - compassRotation : 0
+  const qiblaRotation =
+    qiblaAngle !== null ? ((qiblaAngle - heading + 360) % 360) : 0
+
+  const themeColors = isDark ? colors.dark : colors.light
 
   if (!location || qiblaAngle === null) {
     return (
-      <View style={[styles.container, isDark && styles.containerDark, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={isDark ? "#8BC34A" : "#4CAF50"} />
-        <Text style={[styles.loadingText, isDark && styles.textDark]}>Determining your location...</Text>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <ActivityIndicator size="large" color={themeColors.accent} />
+        <Text style={[styles.loadingText, { color: themeColors.text }]}>
+          Determining your location...
+        </Text>
       </View>
     )
   }
 
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <View style={styles.compassContainer}>
-        <View style={styles.compassInnerContainer}>
-          {/* Compass Rose */}
+        <View style={[styles.compassInnerContainer, { backgroundColor: isDark ? "#1E1E1E" : "#FFFFFF" }]}>
           <Image
             source={require("@/assets/images/qibla.png")}
-            style={[styles.compassRose, { transform: [{ rotate: `${-compassRotation}deg` }] }]}
+            style={[
+              styles.compassRose,
+              { transform: [{ rotate: `${-compassRotation}deg` }] },
+            ]}
           />
-
-          {/* Qibla Direction Indicator */}
-          <View style={[styles.qiblaIndicator, { transform: [{ rotate: `${qiblaRotation}deg` }] }]}>
-            <View style={styles.qiblaArrow} />
+          <View
+            style={[
+              styles.qiblaIndicator,
+              { transform: [{ rotate: `${qiblaRotation}deg` }] },
+            ]}
+          >
+            <View style={[styles.qiblaArrow, { backgroundColor: themeColors.accent, shadowColor: themeColors.accent }]} />
           </View>
-
-          {/* Center Dot */}
-          <View style={styles.centerDot} />
+          <View style={[styles.centerDot, { backgroundColor: themeColors.accent, borderColor: themeColors.border }]} />
         </View>
       </View>
 
       <View style={styles.infoContainer}>
-        <Text style={[styles.infoTitle, isDark && styles.textDark]}>Qibla Direction</Text>
-        <Text style={[styles.infoText, isDark && styles.textDark]}>
+        <Text style={[styles.infoTitle, { color: themeColors.text }]}>Qibla Direction</Text>
+        <Text style={[styles.infoText, { color: themeColors.text }]}>
           The Kaaba is {qiblaAngle.toFixed(1)}° from North
         </Text>
-        <Text style={[styles.infoSubtext, isDark && styles.subtextDark]}>
+        <Text style={[styles.infoSubtext, { color: themeColors.secondary }]}>
           Hold your phone flat and align the green arrow with the Qibla direction
         </Text>
+
+        {/* Debug Info (optional) */}
+        {/* <Text style={{ color: themeColors.secondary, marginTop: 10 }}>Heading: {heading.toFixed(1)}°</Text>
+        <Text style={{ color: themeColors.secondary }}>Qibla: {qiblaAngle.toFixed(1)}°</Text>
+        <Text style={{ color: themeColors.secondary }}>Arrow Rot: {qiblaRotation.toFixed(1)}°</Text> */}
       </View>
     </View>
   )
 }
 
+// Color palette
+const colors = {
+  light: {
+    background: "#F5F5F5",
+    text: "#222",
+    secondary: "#666",
+    accent: "#4CAF50",
+    border: "#DDD",
+  },
+  dark: {
+    background: "#121212",
+    text: "#E0E0E0",
+    secondary: "#A0A0A0",
+    accent: "#8BC34A",
+    border: "#333",
+  },
+}
+
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-  },
-  containerDark: {
-    backgroundColor: "#121212",
-  },
-  loadingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 20,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#333333",
-  },
-  textDark: {
-    color: "#E0E0E0",
-  },
-  subtextDark: {
-    color: "#A0A0A0",
   },
   compassContainer: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 40,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 8,
   },
   compassInnerContainer: {
     width: 280,
@@ -142,6 +170,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     position: "absolute",
+    opacity: 0.9,
   },
   qiblaIndicator: {
     position: "absolute",
@@ -153,35 +182,34 @@ const styles = StyleSheet.create({
   qiblaArrow: {
     width: 10,
     height: 140,
-    backgroundColor: "#4CAF50",
     borderTopLeftRadius: 5,
     borderTopRightRadius: 5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   },
   centerDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#4CAF50",
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     position: "absolute",
+    borderWidth: 2,
   },
   infoContainer: {
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 20,
   },
   infoTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333333",
-    marginBottom: 8,
+    fontSize: 26,
+    fontWeight: "600",
+    marginBottom: 6,
   },
   infoText: {
     fontSize: 18,
-    color: "#333333",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   infoSubtext: {
     fontSize: 14,
-    color: "#666666",
     textAlign: "center",
   },
 })
