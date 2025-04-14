@@ -13,6 +13,7 @@ import type { Masjid } from "./types"
 import MasjidBottomSheet from "./components/masjid-bottom-sheet"
 import { darkMapStyle } from "./constants/map-styles"
 import type { BottomSheetModal as BottomSheetModalType } from "@gorhom/bottom-sheet"
+import { ScrollView } from "react-native-gesture-handler"
 
 // We'll conditionally import MapView to avoid the native module error
 let MapView: any = null
@@ -121,7 +122,7 @@ export default function MapScreen() {
   // If MapView is not available, show a fallback UI
   if (!MapView || !BottomSheetModal) {
     return (
-      <View style={[styles.container, isDark && styles.containerDark]}>
+      <ScrollView style={[styles.container, isDark && styles.containerDark]}>
         <Text style={[styles.title, isDark && styles.titleDark]}>Map Not Available</Text>
         <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
           The map functionality requires a native device. Please run this app on a physical device or emulator.
@@ -185,7 +186,7 @@ export default function MapScreen() {
             <Text style={[styles.buttonText, isDark && styles.buttonTextDark]}>Refresh</Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     )
   }
 
@@ -405,7 +406,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 16,
-    borderTopWidth: 1,
+    position: 'relative',
+    bottom: 10,
+    right: 0,
     borderTopColor: "#EEEEEE",
   },
   loader: {
