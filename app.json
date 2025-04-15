@@ -53,11 +53,8 @@
         "projectId": "5b42551e-a66b-49ee-aae9-a291df2e2ccb"
       }
     },
-    "runtimeVersion": {
-      "policy": "1.0.0"
-    },
     "updates": {
-      "url": "https://u.expo.dev/8b58f03a-3d97-4843-ae02-c6a62f28b270"
+      "url": "https://u.expo.dev/5b42551e-a66b-49ee-aae9-a291df2e2ccb"
     },
     "owner": "fazlullahmamond"
   }
