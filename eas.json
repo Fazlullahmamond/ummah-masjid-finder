@@ -15,7 +15,10 @@
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "releaseChannel": "production",
+      "developmentClient": false,
+      "distribution": "store"
     }
   },
   "submit": {
